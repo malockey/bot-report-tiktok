@@ -92,8 +92,23 @@ void clearConsole() {
 #endif
 }
 
+int badRequest = 0;
 std::string reportUser(std::string& reportURL, const std::string& proxyUrl = "") {
     std::string result;
+
+    if (badRequest == 10) {
+        std::cout << "\nToo many bad requests, do you want to continue? Y/N" << std::endl;
+        char choice;
+        std::cin >> choice;
+
+        if (choice == 'N' || choice == 'n') {
+            return result = "no more requests";
+        } else if (choice == 'Y' || choice == 'y') {
+            badRequest = 0;
+        } else {
+            std::cout << "\ninvalid choice" << std::endl;
+        }
+    }
 
     if (validURL(reportURL)) {
         std::string response;
@@ -110,12 +125,18 @@ std::string reportUser(std::string& reportURL, const std::string& proxyUrl = "")
             }
 
             res = curl_easy_perform(curl);
+            
 
             if (res == CURLE_OK) {
                 result += timeSystem() + " " + searchStrings(response, "logid") + " " + searchStrings(response, "status_message");
-            } else {
-                result = "Error executing request: " + std::string(curl_easy_strerror(res));
             }
+
+            if (res != CURLE_OK || response == "" || response == "null") {
+                result = "bad request";
+                badRequest++;
+            }
+
+
             curl_easy_cleanup(curl);
         }
     }
@@ -126,12 +147,14 @@ std::string reportUser(std::string& reportURL, const std::string& proxyUrl = "")
 
 int main() {
     std::string reportURL, proxyURL = proxiesURLf();
+    std::cout << "Proxy: " << proxyURL << std::endl;
     std::cout << "Enter the URL: ";
     std::cin >> reportURL;
     clearConsole();
-
+    
     do {
-    reportUser(reportURL);
-    } while (true);
+        reportUser(reportURL);
+    } while (reportUser(reportURL) != "no more requests");
+    
     return 0;
 }
